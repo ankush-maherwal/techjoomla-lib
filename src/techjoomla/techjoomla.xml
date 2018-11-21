@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="library" method="upgrade" version="2.5">
+	<name>Techjoomla</name>
+	<libraryname>techjoomla</libraryname>
+	<author>Techjoomla</author>
+	<authorEmail>extensions@techjoomla.com</authorEmail>
+	<authorUrl>https://techjoomla.com</authorUrl>
+	<copyright>Copyright (c) 2009-2017 Techjoomla. All rights reserved.</copyright>
+	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+	<creationDate>5th Sept 2018</creationDate>
+	<version>1.1.0</version>
+	<description>Common code library for all Techjoola extensions</description>
+	<files>
+		<folder>assets</folder>
+		<folder>controller</folder>
+		<folder>dompdf</folder>
+		<folder>emogrifier</folder>
+		<folder>form</folder>
+		<folder>jsocial</folder>
+		<folder>media</folder>
+		<folder>model</folder>
+		<folder>tjcsv</folder>
+		<folder>tjmail</folder>
+		<folder>tjmedia</folder>
+		<folder>tjmoney</folder>
+		<folder>tjtoolbar</folder>
+		<folder>tjnotifications</folder>
+		<folder>view</folder>
+		<file>common.php</file>
+		<file>index.html</file>
+		<file>techjoomla.xml</file>
+	</files>
+	<languages folder="language">
+		<language tag="en-GB">en-GB/en-GB.lib_techjoomla.ini</language>
+		<language tag="en-GB">en-GB/en-GB.lib_techjoomla.sys.ini</language>
+	</languages>
+</extension>
