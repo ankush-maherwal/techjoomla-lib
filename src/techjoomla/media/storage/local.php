@@ -316,6 +316,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$this->created_date = JFactory::getDate()->toSql();
 
 				$this->bind($this->getProperties());
+				$returnData = array();
 
 				if ($this->saveData)
 				{
@@ -328,9 +329,13 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 						return false;
 					}
+
+				if ($tjMediaTable->id)
+				{
+					$returnData['id'] = $tjMediaTable->id;
+				}
 				}
 
-				$returnData = array();
 				$returnData['path'] = $uploadPath;
 
 				// File original name
@@ -341,11 +346,6 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				// Source is replace original file name with date
 				$returnData['source'] = $this->source;
 				$returnData['size'] = $this->size;
-
-				if ($tjMediaTable->id)
-				{
-					$returnData['id'] = $tjMediaTable->id;
-				}
 
 				$mediaType = explode(".", $returnData['type']);
 				$mediaPath = JUri::root() . $this->uploadPath;
