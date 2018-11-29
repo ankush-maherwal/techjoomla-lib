@@ -330,10 +330,10 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 						return false;
 					}
 
-				if ($tjMediaTable->id)
-				{
-					$returnData['id'] = $tjMediaTable->id;
-				}
+					if ($tjMediaTable->id)
+					{
+						$returnData['id'] = $tjMediaTable->id;
+					}
 				}
 
 				$returnData['path'] = $uploadPath;
