@@ -39,7 +39,9 @@ var tjexport = {
 					jQuery(".export").removeAttr("disabled");
 					console.log(response['limit_start']);
 					console.log(response['total']);
-					location.href = response['download_file'];
+					/** global: csv_export_url */
+					/** global: tj_csv_site_root */
+					location.href = tj_csv_site_root + csv_export_url + '&task=download&file_name=' + response['file_name'];
 					tjexport.displayNotice('success',csv_export_success);
 					tjexport.hideProgressBar();
 					console.log("Download Successfully.");
