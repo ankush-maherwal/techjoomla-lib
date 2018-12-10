@@ -113,4 +113,56 @@ class TjExportCsv extends JViewLegacy
 		echo json_encode($returnData);
 		jexit();
 	}
+
+	/**
+	 * Common function to download the csv file.
+	 *
+	 * @param   string  $file  File path
+	 *
+	 * @return  void|boolean On success void on failure false
+	 *
+	 * @since   1.1.0
+	 */
+	public function download($file)
+	{
+		$config = JFactory::getConfig();
+
+		if (empty($file))
+		{
+			return false;
+		}
+
+		$file = $config->get('tmp_path') . '/' . $file;
+
+		if (fopen($file, "r"))
+		{
+			$fsize = filesize($file);
+			$path_parts = pathinfo($file);
+
+			header("Cache-Control: public, must-revalidate");
+			header('Cache-Control: pre-check=0, post-check=0, max-age=0');
+			header("Expires: 0");
+			header("Content-Description: File Transfer");
+			header("Content-Type: text/csv");
+			header("Content-Length: " . (string) $fsize);
+			header("Content-Disposition: filename=\"" . $path_parts["basename"] . "\"");
+			$fd = fopen($file, "r");
+
+			if (empty($fd))
+			{
+				return false;
+			}
+
+			while (!feof($fd))
+			{
+				$buffer = fread($fd, 2048);
+				echo $buffer;
+			}
+
+			fclose($fd);
+		}
+
+		ignore_user_abort(true);
+		unlink($file);
+	}
 }
