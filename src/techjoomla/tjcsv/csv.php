@@ -158,7 +158,6 @@ class TjCsv
 		$return = array();
 		$return['limit_start'] = $this->limitStart;
 		$return['total'] = $this->recordCnt;
-		$return['download_file'] = JURI::root() . 'tmp/' . $this->csvFilename;
 		$return['file_name'] = $this->csvFilename;
 
 	return $return;
