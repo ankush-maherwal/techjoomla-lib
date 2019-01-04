@@ -43,9 +43,10 @@ class TJMediaXref extends JObject
 	 */
 	public function __construct($configs = array())
 	{
+		$mediaConfig = array();
+
 		if (isset($configs['mediaId']))
 		{
-			$mediaConfig = array();
 			$mediaConfig['id'] = $configs['mediaId'];
 		}
 
@@ -62,7 +63,7 @@ class TJMediaXref extends JObject
 	}
 
 	/**
-	 * Method to load a media xref object by xref id 
+	 * Method to load a media xref object by xref id
 	 *
 	 * @param   mixed  $id  The id of the object to get.
 	 *
