@@ -572,11 +572,10 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	 * @param   STRING  $filename_direct  - for direct download it will be file path like http://
 	 * localhost/j30/media/com_quick2cart/qtc_pack.zip  -- for FUTURE SCOPE
 	 * @param   STRING  $extern           - Remote url or a local file specified by $url
-	 * @param   STRING  $exitHere         - To exit from here
 	 *
 	 * @return  integer
 	 */
-	public function downloadMedia($file, $filename_direct = '', $extern = '', $exitHere = 1)
+	public function downloadMedia($file, $filename_direct = '', $extern = '')
 	{
 		jimport('joomla.filesystem.file');
 
@@ -628,12 +627,20 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			@set_time_limit(0);
 		}
 
-		@readfile($file);
+		$fp = fopen($file, "r");
 
-		if ($exitHere == 1)
+		if ($fp !== false)
 		{
-			exit;
+			while (!feof($fp))
+			{
+				$buff = fread($fp, $len);
+				print $buff;
+			}
+
+			fclose($fp);
 		}
+
+		exit;
 	}
 
 	/**
