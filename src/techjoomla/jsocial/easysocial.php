@@ -132,12 +132,14 @@ class JSocialEasysocial implements JSocial
 
 		if (!empty($esfriends_ids))
 		{
+			$displayName = ES::config()->get('users.displayName');
+
 			foreach ($esfriends_ids AS $id)
 			{
 				$user = Foundry::user($id);
 				$esfriends[$id] = new StdClass;
 				$esfriends[$id]->id = $id;
-				$esfriends[$id]->name = $user->name;
+				$esfriends[$id]->name = ($displayName == 'username') ? $user->username : $user->name;
 				$esfriends[$id]->avatar = $this->getAvatar($user);
 				$esfriends[$id]->profile_link = $this->getProfileUrl($user);
 			}
