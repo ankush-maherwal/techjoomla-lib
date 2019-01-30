@@ -341,9 +341,10 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$returnData['path'] = $uploadPath;
 
 				// File original name
-				$returnData['name'] = $this->original_filename;
+				$returnData['name']              = $this->original_filename;
 				$returnData['original_filename'] = $this->original_filename;
-				$returnData['type'] = $this->type;
+				$returnData['type']              = $this->type;
+				$returnData['params']            = $this->params;
 
 				// Source is replace original file name with date
 				$returnData['source'] = $this->source;
@@ -1071,6 +1072,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		$returnData['created_by'] = Factory::getUser()->id;
 		$returnData['created_date'] = Factory::getDate()->toSql();
 		$returnData['storage'] = $this->storage;
+		$returnData['params'] = $this->params;
 
 		JLoader::import("/techjoomla/media/tables/files", JPATH_LIBRARIES);
 		$tjMediaTable = Table::getInstance('Files', 'TJMediaTable');
