@@ -16,7 +16,7 @@ var TjHouseKeeping = {
 
 	fixDatabase: function (client, controller){
 
-		var initResponse = '';
+		let initResponse = '';
 
 		/* Add required HTML elements in the body*/
 		jQuery('<div class="fix-database-info"><div class="progress-container"></div></div>').insertBefore(".tjBs3");
@@ -48,8 +48,8 @@ var TjHouseKeeping = {
 			if (initResponse.scripts.length > 0)
 			{
 				/* Initialise progress bar */
-				var obj = jQuery('.fix-database-info .progress-container');
-				var progressBarObj = new TjHouseKeeping.createProgressbar(obj);
+				let obj = jQuery('.fix-database-info .progress-container');
+				let progressBarObj = new TjHouseKeeping.createProgressbar(obj);
 				let tjHouseKeepingCounter = 0;
 
 				initResponse.scripts.forEach(function(script)
@@ -86,7 +86,7 @@ var TjHouseKeeping = {
 			dataType:'json',
 			success: function(response)
 			{
-				var progressPercent = parseInt(tjEachScriptProgress * (tjHouseKeepingScriptsCount+1));
+				let progressPercent = parseInt(tjEachScriptProgress * (tjHouseKeepingScriptsCount+1));
 				progressBarObj.setProgress(progressPercent);
 
 				if (response === true)
@@ -131,7 +131,7 @@ var TjHouseKeeping = {
 		{
 			this.statusbar.show();
 			this.progressBar.show();
-			var progressBarWidth =progress*this.progressBar.width()/ 100;
+			let progressBarWidth =progress*this.progressBar.width()/ 100;
 			this.progressBar.find('.progress-bar').animate({ width: progressBarWidth }, 10);
 			this.progressBar.find('.progress_per').html(progress + "% ");
 		}
