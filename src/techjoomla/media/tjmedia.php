@@ -19,7 +19,7 @@ interface TjMedia
 	 * Method to Add record on respective data source
 	 *
 	 * @param   array  $files  field name
-	 * 
+	 *
 	 * @return  mixed
 	 *
 	 * @since   1.0.0
@@ -28,7 +28,7 @@ interface TjMedia
 
 	/**
 	 * Method to Delete record on respective data source
-	 * 
+	 *
 	 * @return  mixed
 	 *
 	 * @since   1.0.0
@@ -42,9 +42,8 @@ interface TjMedia
 	 * @param   STRING  $filename_direct  - for direct download it will be file path like http://
 	 * localhost/j30/media/com_quick2cart/qtc_pack.zip  -- for FUTURE SCOPE
 	 * @param   STRING  $extern           - Remote url or a local file specified by $url
-	 * @param   STRING  $exitHere         - To exit from here
 	 *
 	 * @return  integer
 	 */
-	public function downloadMedia($file, $filename_direct = '', $extern = '', $exitHere = 1);
+	public function downloadMedia($file, $filename_direct = '', $extern = '');
 }
