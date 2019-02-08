@@ -241,7 +241,7 @@ class Tjnotifications
 					$key = $data[0];
 					$value = $data[1];
 
-					if (!empty($replacements->$key->$value))
+					if (!empty($replacements->$key->$value) || $replacements->$key->$value == 0)
 					{
 						$replaceWith = $replacements->$key->$value;
 					}
