@@ -1041,9 +1041,12 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	public function uploadLink($uploadLink)
 	{
 		$returnData = array();
-		$regExp = "/^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/";
+		$regExpYoutube = "/^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/";
+		$regExpVimeo = "#(?:https?://player.vimeo.com/video|vimeo.com)/([0-9]+)#i";
 
-		if (preg_match($regExp, $uploadLink['name'], $match))
+		$originalFileName = $uploadLink['name'];
+
+		if (preg_match($regExpYoutube, $uploadLink['name'], $match))
 		{
 			if (strpos($match[4], "embed"))
 			{
@@ -1054,6 +1057,10 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$uploadLink['name'] = 'https://www.youtube.com/embed/' . $match[5] . '?enablejsapi=1';
 			}
 		}
+		elseif (preg_match($regExpVimeo, $uploadLink['name'], $match))
+		{
+			$uploadLink['name'] = 'https://player.vimeo.com/video/' . $match[1];
+		}
 		else
 		{
 			return false;
@@ -1062,8 +1069,8 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		$returnData['path'] = $uploadLink['name'];
 
 		// File original name
-		$returnData['name'] = $uploadLink['name'];
-		$returnData['original_filename'] = $uploadLink['name'];
+		$returnData['title'] = $uploadLink['name'];
+		$returnData['original_filename'] = $originalFileName;
 		$returnData['type'] = 'video.' . $uploadLink['type'];
 		$returnData['source'] = $uploadLink['name'];
 		$returnData['valid'] = 1;
