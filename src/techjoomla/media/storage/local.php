@@ -47,6 +47,8 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 	public $absolute_path = null;
 
+	public $mediaUploadPath = 'images/tjmedia';
+
 	public $state = 0;
 
 	public $source = 0;
@@ -87,7 +89,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 		// Default path
 		$this->uploadPath = (array_key_exists('uploadPath', $configs) &&
-		!empty($configs['uploadPath'])) ? $configs['uploadPath'] : JPATH_SITE . '/images/mediamanager';
+		!empty($configs['uploadPath'])) ? $configs['uploadPath'] : JPATH_SITE . '/' . $this->mediaUploadPath;
 
 		// Delete old data or not
 		$this->oldData = (array_key_exists('oldData', $configs)) ? $configs['oldData'] : 0;
