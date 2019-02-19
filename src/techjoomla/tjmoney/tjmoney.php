@@ -356,7 +356,7 @@ class TjMoney
 
 		// Do decimal formatting
 
-		if (!($this->getDecimal()))
+		if ($this->getDecimal())
 		{
 			$roundedAmt = str_replace(".", $this->getDecimal(), $roundedAmt);
 		}
