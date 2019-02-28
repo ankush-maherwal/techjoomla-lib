@@ -16,6 +16,7 @@ defined('JPATH_PLATFORM') or die();
 
 jimport('joomla.filesystem.file');
 jimport('joomla.filesystem.folder');
+jimport('joomla.user.helper');
 jimport('techjoomla.media.tjmedia');
 JLoader::import("/techjoomla/media/xref", JPATH_LIBRARIES);
 jimport('techjoomla.object.object');
@@ -306,7 +307,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			reset($temp);
 			$first = current($temp);
 			$this->source = '';
-			$this->source = round(microtime(true)) . "_" . $first . '.' . $fileDetails['extension'];
+			$this->source = round(microtime(true)) . "_" . JUserHelper::genRandomPassword(5) . "_" . $first . '.' . $fileDetails['extension'];
 
 			// If folder is not present create it
 			if (!Folder::exists($this->uploadPath))
