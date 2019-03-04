@@ -26,11 +26,7 @@ abstract class TJFileViewer
 
 	CONST BOX_API_VERSION = '1.62.1';
 
-	public static $boxPreviewPolyfillJs;
-
-	public static $boxPreviewJs;
-
-	public static $boxPreviewCss;
+	public static $box_assets_loaded;
 
 	/**
 	 * Get viewer
@@ -51,6 +47,7 @@ abstract class TJFileViewer
 			switch ($viewer)
 			{
 				case 'google':
+				default:
 					return static::_renderGoogleDocViewer($file, $name, $attribs);
 					break;
 
@@ -60,10 +57,6 @@ abstract class TJFileViewer
 
 				case 'box':
 					return static::_renderBoxViewer($file, $container, $token, $attribs);
-					break;
-
-				default:
-					return static::_renderGoogleDocViewer($file, $name, $attribs);
 					break;
 			}
 		}
@@ -115,30 +108,18 @@ abstract class TJFileViewer
 	{
 		$boxViewerHtml = '';
 
-		// Get polyfill JS
-		if (empty(static::$boxPreviewPolyfillJs))
+		if (empty(static::$box_assets_loaded))
 		{
-			static::$boxPreviewPolyfillJs = '<script src="https://cdn.polyfill.io/' . self::POLLY_FILL_JS_VERSION .
-			'/polyfill.min.js?features=Promise"></script>';
+			$polyfillJsVersion = self::POLLY_FILL_JS_VERSION;
+			$boxApiVersion = self::BOX_API_VERSION;
 
-			$boxViewerHtml .= static::$boxPreviewPolyfillJs;
-		}
+			static::$box_assets_loaded = <<<EOT
+			<script src="https://cdn.polyfill.io/{$polyfillJsVersion}/polyfill.min.js?features=Promise"></script>
+			<script src="https://cdn01.boxcdn.net/platform/preview/{$boxApiVersion}/en-US/preview.js"></script>
+			<link rel="stylesheet" href="https://cdn01.boxcdn.net/platform/preview/{$boxApiVersion}/en-US/preview.css" />
+EOT;
 
-		// Get box preview JS
-		if (empty(static::$boxPreviewJs))
-		{
-			static::$boxPreviewJs = '<script src="https://cdn01.boxcdn.net/platform/preview/' . self::BOX_API_VERSION . '/en-US/preview.js"></script>';
-
-			$boxViewerHtml .= static::$boxPreviewJs;
-		}
-
-		// Get box preview CSS
-		if (empty(static::$boxPreviewCss))
-		{
-			static::$boxPreviewCss = '<link rel="stylesheet" href="https://cdn01.boxcdn.net/platform/preview/'
-			. self::BOX_API_VERSION . '/en-US/preview.css" />';
-
-			$boxViewerHtml .= static::$boxPreviewCss;
+			$boxViewerHtml = static::$box_assets_loaded;
 		}
 
 		// Render Attribs
