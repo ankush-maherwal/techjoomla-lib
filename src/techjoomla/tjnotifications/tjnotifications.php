@@ -5,10 +5,9 @@
  * @copyright  Copyright (c) 2009-2015 TechJoomla. All rights reserved.
  * @license    GNU General Public License version 2 or later.
  */
-use Media\TJQueue\TJQueueProduce;
+
 JModelLegacy::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_tjnotifications/models', 'NotificationsModel');
 JModelLegacy::addIncludePath(JPATH_SITE . '/components/com_tjnotifications/models', 'NotificationsModel');
-jimport('tjqueue.tjqueueproduce', JPATH_SITE . '/media');
 
 /**
  * Tjnotifications
@@ -41,23 +40,13 @@ class Tjnotifications
 	 * @param   array       $recipients    It's an array of user objects
 	 * @param   Object      $replacements  It is a object contains replacement.
 	 * @param   JParameter  $options       It is a object contains Jparameters like cc,bcc.
-	 * @param   boolean     $queue         It is flag to use a queue or not
 	 *
 	 * @return  boolean value.
 	 *
 	 * @since 1.0
 	 */
-	public static function send($client, $key, $recipients, $replacements, $options, $queue = false)
+	public static function send($client, $key, $recipients, $replacements, $options)
 	{
-		// Push data to queue
-		if ($queue == true)
-		{
-			$result = self::pushDataToQueue($client, $key, $recipients, $replacements, $options);
-
-			return $result;
-		}
-
-		// Send email directly - Don't push data to queue.
 		try
 		{
 			$model = JModelList::getInstance('Notifications', 'TjnotificationsModel', array('ignore_request' => true));
@@ -169,167 +158,6 @@ class Tjnotifications
 			{
 				throw new Exception(JText::_('LIB_TECHJOOMLA_TJNOTIFICATION_ADD_RECIPIENTS_OR_CHECK_PREFERENCES'));
 			}
-		}
-		catch (Exception $e)
-		{
-			$return['success'] = 0;
-			$return['message'] = $e->getMessage();
-
-			return $return;
-		}
-	}
-
-	/**
-	 * Method to push data in queue.
-	 *
-	 * @param   string      $client        A requird field same as component name.
-	 * @param   string      $key           Key is unique in client.
-	 * @param   array       $recipients    It's an array of user objects
-	 * @param   Object      $replacements  It is a object contains replacement.
-	 * @param   JParameter  $options       It is a object contains Jparameters like cc,bcc.
-	 *
-	 * @return  boolean value.
-	 *
-	 * @since 1.0
-	 */
-	public static function pushDataToQueue($client, $key, $recipients, $replacements, $options)
-	{
-		$return = [];
-
-		// Get body
-		$messageBody = self::getMessageBody($client, $key, $recipients, $replacements, $options);
-
-		// If error in preparing message body
-
-		/*
-		if ($messageBody['success'] == 0)
-		{
-			return $messageBody;
-		}
-		*/
-
-		try
-		{
-			$TJQueueProduce = new TJQueueProduce;
-
-			// Set message body
-			$TJQueueProduce->message->setBody(json_encode($messageBody));
-
-			// @Params client, value
-			$TJQueueProduce->message->setProperty('client', 'core.email');
-			$TJQueueProduce->produce();
-		}
-		catch (Exception $e)
-		{
-			$return['success'] = 0;
-			$return['message'] = $e->getMessage();
-
-			return $return;
-		}
-
-		$return['success'] = 1;
-		$return['message'] = '';
-
-		return $return;
-	}
-
-	/**
-	 * Method to push data in queue.
-	 *
-	 * @param   string      $client        A requird field same as component name.
-	 * @param   string      $key           Key is unique in client.
-	 * @param   array       $recipients    It's an array of user objects
-	 * @param   Object      $replacements  It is a object contains replacement.
-	 * @param   JParameter  $options       It is a object contains Jparameters like cc,bcc.
-	 *
-	 * @return  boolean value.
-	 *
-	 * @since 1.0
-	 */
-	public static function getMessageBody($client, $key, $recipients, $replacements, $options)
-	{
-		try
-		{
-			$body = new stdClass;
-
-			$model = JModelList::getInstance('Notifications', 'TjnotificationsModel', array('ignore_request' => true));
-			$template = $model->getTemplate($client, $key);
-			$addRecipients = self::getRecipients($client, $key, $recipients, $options);
-
-			if (isset($addRecipients))
-			{
-				// Invoke JMail Class
-				$mailer = JFactory::getMailer();
-
-				if ($options->get('from') != null && $options->get('fromname') != null)
-				{
-					$from = array($options->get('from'),$options->get('fromname'));
-				}
-				else
-				{
-					$config = JFactory::getConfig();
-					$from = array($config->get('mailfrom'), $config->get('fromname'));
-				}
-
-				$body->from = $from;
-
-				// Set cc for email
-				if ($options->get('cc') != null)
-				{
-					$body->cc = $options->get('cc');
-				}
-
-				// Set bcc for email
-				if ($options->get('bcc') != null)
-				{
-					$body->bcc = $options->get('bcc');
-				}
-
-				// Set bcc for email
-				if ($options->get('replyTo') != null)
-				{
-					$body->replyTo = $options->get('replyTo');
-				}
-
-				if ($options->get('attachment') != null)
-				{
-					if ($options->get('attachmentName') != null)
-					{
-						$body->attachment = $options->get('attachment');
-						$body->attachmentName = $options->get('attachmentName');
-					}
-					else
-					{
-						$body->attachment = $options->get('attachment');
-					}
-				}
-
-				// If you would like to send String Attachment in email
-				if ($options->get('stringAttachment') != null)
-				{
-					$body->stringAttachment = $options->get('stringAttachment');
-				}
-
-				// If you would like to send as HTML, include this line; otherwise, leave it out
-				$body->isNotHTML = $options->get('isNotHTML');
-
-				// Add a recipient -- this can be a single address (string) or an array of addresses
-				$body->recipients = $addRecipients;
-
-				// Set subject for email
-				$body->subject = self::getSubject($template->email_subject, $options);
-
-				// Set body for email
-				$body->body = self::getBody($template->email_body, $replacements);
-
-				$body->email_status = $template->email_status;
-			}
-			else
-			{
-				throw new Exception(JText::_('LIB_TECHJOOMLA_TJNOTIFICATION_ADD_RECIPIENTS_OR_CHECK_PREFERENCES'));
-			}
-
-			return $body;
 		}
 		catch (Exception $e)
 		{
