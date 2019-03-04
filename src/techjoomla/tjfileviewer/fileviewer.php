@@ -46,17 +46,17 @@ abstract class TJFileViewer
 		{
 			switch ($viewer)
 			{
-				case 'google':
-				default:
-					return static::_renderGoogleDocViewer($file, $name, $attribs);
-					break;
-
 				case 'microsoft':
 					return static::_renderMicrosoftWebAppsViewer($file, $name, $attribs);
 					break;
 
 				case 'box':
 					return static::_renderBoxViewer($file, $container, $token, $attribs);
+					break;
+
+				case 'google':
+				default:
+					return static::_renderGoogleDocViewer($file, $name, $attribs);
 					break;
 			}
 		}
