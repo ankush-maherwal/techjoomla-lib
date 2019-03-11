@@ -324,7 +324,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			}
 
 			// Upload the image
-			if (! File::upload($fileTmpName, $uploadPath))
+			if (!File::upload($fileTmpName, $uploadPath))
 			{
 				$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_ERROR_MOVING_FILE"));
 
@@ -817,7 +817,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$mime = "application/x-wais-source";
 				break;
 			case "zip":
-				$mime = "application/x-zip";
+				$mime = "application/zip";
 				break;
 			case "au":
 				$mime = "audio/basic";
