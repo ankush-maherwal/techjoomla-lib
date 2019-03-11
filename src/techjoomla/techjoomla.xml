@@ -10,8 +10,19 @@
 	<creationDate>7th Feb 2019</creationDate>
 	<version>1.1.2</version>
 	<description>Common code library for all Techjoola extensions</description>
+	<install>
+		<sql>
+			<file driver="mysql" charset="utf8">sql/install.sql</file>
+		</sql>
+	</install>
+	<update>
+		<schemas>
+			<schemapath type="mysql">sql/updates/mysql</schemapath>
+		</schemas>
+	</update>
 	<files>
 		<folder>assets</folder>
+		<folder>sql</folder>
 		<folder>controller</folder>
 		<folder>dompdf</folder>
 		<folder>emogrifier</folder>
