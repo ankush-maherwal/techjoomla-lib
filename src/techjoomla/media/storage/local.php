@@ -282,7 +282,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			$this->source = round(microtime(true)) . "_" . $first . '.' . end($temp);
 
 			// If folder is not present create it
-			if (! JFolder::exists($this->uploadPath))
+			if (!JFolder::exists($this->uploadPath))
 			{
 				JFolder::create($this->uploadPath);
 			}
@@ -296,7 +296,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			}
 
 			// Upload the image
-			if (! JFile::upload($fileTmpName, $uploadPath))
+			if (!JFile::upload($fileTmpName, $uploadPath))
 			{
 				$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_ERROR_MOVING_FILE"));
 
@@ -798,7 +798,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$mime = "application/x-wais-source";
 				break;
 			case "zip":
-				$mime = "application/x-zip";
+				$mime = "application/zip";
 				break;
 			case "au":
 				$mime = "audio/basic";
