@@ -5,11 +5,18 @@
  * @copyright   Copyright (C) 2009 - 2018 Techjoomla. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
+use Joomla\CMS\Factory;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Filesystem\Folder;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Filesystem\File;
 
 defined('JPATH_PLATFORM') or die();
 
 jimport('joomla.filesystem.file');
 jimport('joomla.filesystem.folder');
+jimport('joomla.user.helper');
 jimport('techjoomla.media.tjmedia');
 JLoader::import("/techjoomla/media/xref", JPATH_LIBRARIES);
 jimport('techjoomla.object.object');
@@ -41,6 +48,8 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 	public $absolute_path = null;
 
+	public $mediaUploadPath = 'images/tjmedia';
+
 	public $state = 0;
 
 	public $source = 0;
@@ -58,6 +67,13 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	public $created_date = null;
 
 	public $params = null;
+
+	public $allowedExtension = array (
+			'bmp', 'csv', 'doc', 'gif', 'ico',
+			'jpg','jpeg', 'odg', 'odp', 'ods',
+			'odt', 'pdf','png', 'ppt', 'txt',
+			'xcf', 'xls', 'mp4', 'webm'
+		);
 
 	/**
 	 * Method to initialise class based on global setting
@@ -81,7 +97,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 		// Default path
 		$this->uploadPath = (array_key_exists('uploadPath', $configs) &&
-							!empty($configs['uploadPath'])) ? $configs['uploadPath'] : JPATH_SITE . '/images/mediamanager';
+		!empty($configs['uploadPath'])) ? $configs['uploadPath'] : JPATH_SITE . '/' . $this->mediaUploadPath;
 
 		// Delete old data or not
 		$this->oldData = (array_key_exists('oldData', $configs)) ? $configs['oldData'] : 0;
@@ -114,6 +130,12 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		// Check is authorized user adding media.
 		$this->auth = (array_key_exists('auth', $configs) && !empty($configs['auth'])) ? $configs['auth'] : "";
 
+		// Check for allowed extensions.
+		if ((array_key_exists('allowedExtension', $configs)	&& !empty($configs['allowedExtension'])))
+		{
+			$this->allowedExtension = array_map('strtolower', $configs['allowedExtension']);
+		}
+
 		if (!empty($configs['id']))
 		{
 			$this->load($configs['id']);
@@ -132,12 +154,12 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	public function load($id)
 	{
 		JLoader::import("/techjoomla/media/tables/files", JPATH_LIBRARIES);
-		$table = JTable::getInstance('Files', 'TJMediaTable');
+		$table = Table::getInstance('Files', 'TJMediaTable');
 
 		// Load the object based on the id or throw a warning.
 		if (! $table->load($id))
 		{
-			$this->setError("LIB_TECHJOOMLA_MEDIA_NO_MEDIA_FILE_IN_MEDIA_TABLE");
+			$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_NO_MEDIA_FILE_IN_MEDIA_TABLE"));
 
 			return false;
 		}
@@ -151,29 +173,25 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		if ($mediaType[0] == 'image')
 		{
 			// Example = {JUri::root()}/learning/media/com_jticketing/venues/images/L_1527498289_69506906-volleyball-wallpapers.jpg
-			$mediaFolder = $mediaType[0] . 's';
-			$table->media = $mediaPath . '/' . $mediaFolder . '/' . $table->source;
-			$table->media_s = $mediaPath . '/' . $mediaFolder . '/S_' . $table->source;
-			$table->media_m = $mediaPath . '/' . $mediaFolder . '/M_' . $table->source;
-			$table->media_l = $mediaPath . '/' . $mediaFolder . '/L_' . $table->source;
+			$table->media = $mediaPath . '/' . $table->source;
+			$table->media_s = $mediaPath . '/S_' . $table->source;
+			$table->media_m = $mediaPath . '/M_' . $table->source;
+			$table->media_l = $mediaPath . '/L_' . $table->source;
 		}
 		elseif ($mediaType[0] == 'video')
 		{
-			$mediaFolder = $mediaType[0] . 's';
-
 			if ($mediaType[1] == 'youtube')
 			{
 				$table->media = $table->source;
 			}
 			else
 			{
-				$table->media = $mediaPath . '/' . $mediaFolder . '/' . $table->source;
+				$table->media = $mediaPath . '/' . $table->source;
 			}
 		}
 		else
 		{
-			$mediaFolder = $mediaType[0] . 's';
-			$table->media = $mediaPath . '/' . $mediaFolder . '/' . $table->source;
+			$table->media = $mediaPath . '/' . $table->source;
 		}
 
 		// Assuming all is well at this point let's bind the data
@@ -221,10 +239,20 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			// Convert name to lowercase
 			$this->original_filename = strtolower($file['name']);
 
+			// Check if file is without extension
+			$fileDetails = pathinfo($this->original_filename);
+
+			if (!isset($fileDetails['extension']) || !in_array($fileDetails['extension'], $this->allowedExtension))
+			{
+				$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_INVALID_FILE_TYPE_ERROR"));
+
+				return false;
+			}
+
 			// Replace "spaces" with "_" in filename
 			$this->original_filename = preg_replace('/\s/', '_', $this->original_filename);
-			$this->type = $file['type'];
 			$fileTmpName = $file['tmp_name'];
+			$this->type = $this->getMimeType($fileTmpName);
 			$this->size = $file['size'];
 			$fileError = $file['error'];
 
@@ -234,19 +262,19 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				case 0:
 					break;
 				case 4:
-					$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_NO_FILE_SENT_ERROR"));
+					$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_NO_FILE_SENT_ERROR"));
 
 					return false;
 				case 1:
-					$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR_INI"));
+					$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR_INI"));
 
 					return false;
 				case 2:
-					$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR"));
+					$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR"));
 
 					return false;
 				default:
-					$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_UNKOWN"));
+					$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_UNKOWN"));
 
 					return false;
 			}
@@ -257,7 +285,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				{
 					if (! in_array($this->type, $this->default_type))
 					{
-						$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_INVALID_FILE_TYPE_ERROR"));
+						$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_INVALID_FILE_TYPE_ERROR"));
 
 						return false;
 					}
@@ -269,7 +297,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			{
 				if ($this->size > $this->maxsize)
 				{
-					$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR"));
+					$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_EXEEDED_FILE_SIZE_LIMIT_ERROR"));
 
 					return false;
 				}
@@ -279,12 +307,16 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			reset($temp);
 			$first = current($temp);
 			$this->source = '';
-			$this->source = round(microtime(true)) . "_" . $first . '.' . end($temp);
+			$this->source = round(microtime(true)) . "_" . JUserHelper::genRandomPassword(5) . "_" . $first . '.' . $fileDetails['extension'];
 
 			// If folder is not present create it
+<<<<<<< HEAD
 			if (!JFolder::exists($this->uploadPath))
+=======
+			if (!Folder::exists($this->uploadPath))
+>>>>>>> 73172e60741efe659323cd820f12ede22c1f6fed
 			{
-				JFolder::create($this->uploadPath);
+				Folder::create($this->uploadPath);
 			}
 
 			$uploadPath = $this->uploadPath . '/' . $this->source;
@@ -292,13 +324,17 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			// If media Id is present and if user want to delete the old data then delete the old media form the server
 			if ($this->id && $this->oldData == 0)
 			{
-				JFile::delete($this->uploadPath . "/" . $this->source);
+				File::delete($this->uploadPath . "/" . $this->source);
 			}
 
 			// Upload the image
+<<<<<<< HEAD
 			if (!JFile::upload($fileTmpName, $uploadPath))
+=======
+			if (! File::upload($fileTmpName, $uploadPath))
+>>>>>>> 73172e60741efe659323cd820f12ede22c1f6fed
 			{
-				$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_ERROR_MOVING_FILE"));
+				$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_ERROR_MOVING_FILE"));
 
 				return false;
 			}
@@ -313,7 +349,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 
 				$this->uploadPath = str_replace(JPATH_SITE . "/", "", $this->uploadPath);
 
-				$this->created_date = JFactory::getDate()->toSql();
+				$this->created_date = Factory::getDate()->toSql();
 
 				$this->bind($this->getProperties());
 				$returnData = array();
@@ -321,11 +357,11 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				if ($this->saveData)
 				{
 					JLoader::import("/techjoomla/media/tables/files", JPATH_LIBRARIES);
-					$tjMediaTable = JTable::getInstance('Files', 'TJMediaTable');
+					$tjMediaTable = Table::getInstance('Files', 'TJMediaTable');
 
 					if (!$tjMediaTable->save($this->getProperties()))
 					{
-						$this->setError(JText::_("LIB_TECHJOOMLA_MEDIA_ERROR_SAVING_FILE"));
+						$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_ERROR_SAVING_FILE"));
 
 						return false;
 					}
@@ -339,16 +375,17 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				$returnData['path'] = $uploadPath;
 
 				// File original name
-				$returnData['name'] = $this->original_filename;
+				$returnData['name']              = $this->original_filename;
 				$returnData['original_filename'] = $this->original_filename;
-				$returnData['type'] = $this->type;
+				$returnData['type']              = $this->type;
+				$returnData['params']            = $this->params;
 
 				// Source is replace original file name with date
 				$returnData['source'] = $this->source;
 				$returnData['size'] = $this->size;
 
 				$mediaType = explode(".", $returnData['type']);
-				$mediaPath = JUri::root() . $this->uploadPath;
+				$mediaPath = Uri::root() . $this->uploadPath;
 
 				if ($mediaType[0] == 'image')
 				{
@@ -360,7 +397,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				}
 				else
 				{
-						$returnData['media'] = $mediaPath . '/' . $returnData['source'];
+					$returnData['media'] = $mediaPath . '/' . $returnData['source'];
 				}
 
 				$returnDataArray[] = $returnData;
@@ -381,7 +418,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	 */
 	public function bind($data = array())
 	{
-		$user = JFactory::getUser();
+		$user = Factory::getUser();
 		$isAdmin = $user->authorise('core.admin');
 
 		$type = explode("/", $data['type']);
@@ -403,7 +440,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				{
 					if (!$data['auth'])
 					{
-						$this->setError(JText::_("JERROR_ALERTNOAUTHOR"));
+						$this->setError(Text::_("JERROR_ALERTNOAUTHOR"));
 
 						return false;
 					}
@@ -416,7 +453,7 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			{
 				if (!$data['auth'])
 				{
-					$this->setError(JText::_("JERROR_ALERTNOAUTHOR"));
+					$this->setError(Text::_("JERROR_ALERTNOAUTHOR"));
 
 					return false;
 				}
@@ -442,68 +479,54 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	 */
 	public function delete()
 	{
-		$cfg = array(
-				'text_file' => 'mediaDeletion.log'
-		);
-
-		$logger = new JLogLoggerFormattedtext($cfg);
-
-		JTable::addIncludePath(JPATH_SITE . '/libraries/techjoomla/media/tables');
+		Table::addIncludePath(JPATH_SITE . '/libraries/techjoomla/media/tables');
 		$mediaFilesTable = JTable::getInstance('Files', 'TJMediaTable');
 
-			if (!$mediaFilesTable->delete($this->id))
+		if (!$mediaFilesTable->delete($this->id))
+		{
+			$this->setError($mediaFilesTable->getError());
+
+			return false;
+		}
+		else
+		{
+			$type = explode('.', $this->type);
+			$folderPath = $this->uploadPath;
+
+			if ($this->deleteFile($this->source, $folderPath, $type[0]))
 			{
-				$this->setError($mediaFilesTable->getError());
-
-				return false;
+				return true;
 			}
-			else
-			{
-				$type = explode('.', $this->type);
+		}
+	}
 
-				if ($type[0] === 'image')
-				{
-					$mediaFolder = $type[0] . 's';
-					$folderPath = $this->uploadPath . '/' . $mediaFolder;
+	/**
+	 * Method to delete the media from table whose object has been created
+	 *
+	 * @param   STRING  $filename     File name
+	 *
+	 * @param   STRING  $storagePath  Path where file is stored
+	 *
+	 * @param   STRING  $type         Type of file, default set to image
+	 *
+	 * @return  boolean  True on success
+	 *
+	 * @since  __DEPLOY_VERSION__
+	 */
+	public function deleteFile($filename, $storagePath, $type = 'image')
+	{
+		if ($type === 'image')
+		{
+			$deleteData = array();
+			$deleteData[] = JPATH_SITE . '/' . $storagePath . "/" . $filename;
+			$deleteData[] = JPATH_SITE . '/' . $storagePath . "/S_" . $filename;
+			$deleteData[] = JPATH_SITE . '/' . $storagePath . "/M_" . $filename;
+			$deleteData[] = JPATH_SITE . '/' . $storagePath . "/L_" . $filename;
 
-					$deleteData = array();
-					$deleteData[] = JPATH_SITE . '/' . $folderPath . "/" . $this->source;
-					$deleteData[] = JPATH_SITE . '/' . $folderPath . "/S_" . $this->source;
-					$deleteData[] = JPATH_SITE . '/' . $folderPath . "/M_" . $this->source;
-					$deleteData[] = JPATH_SITE . '/' . $folderPath . "/L_" . $this->source;
+			return File::delete($deleteData);
+		}
 
-					foreach ($deleteData as $image)
-					{
-						if (JFile::exists($image))
-						{
-							if (!JFile::delete($image))
-							{
-								$msg = JText::_('LIB_TECHJOOMLA_MEDIA_ERROR_DELETING_FILE') . $image;
-								$mediaEntry = new JLogEntry($msg);
-								$logger->addEntry($mediaEntry);
-							}
-						}
-					}
-
-					return true;
-				}
-				else
-				{
-					$mediaFolder = $type[0] . 's';
-					$folderPath = $this->uploadPath . '/' . $mediaFolder;
-
-					if (!JFile::delete(JPATH_SITE . '/' . $folderPath . "/" . $this->source))
-					{
-						$msg = JText::_('LIB_TECHJOOMLA_MEDIA_ERROR_DELETING_FILE') . JPATH_SITE . '/' . $folderPath . "/" . $this->source;
-						$mediaEntry = new JLogEntry($msg);
-						$logger->addEntry($mediaEntry);
-
-						return false;
-					}
-
-					return true;
-				}
-			}
+		return  File::delete(JPATH_SITE . '/' . $storagePath . "/" . $filename);
 	}
 
 	/**
@@ -521,8 +544,6 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	 */
 	public function resizeImage($src, $imgPath, $fileName)
 	{
-		// Creating a new JImage object, passing it an image path
-		$image = new JImage($src);
 		$file = explode(".", $fileName);
 		$destPath = $imgPath . '/';
 		$format = '';
@@ -535,43 +556,42 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		{
 			$format = IMAGETYPE_PNG;
 		}
-		elseif ($file[1] == 'gif')
+		/*elseif ($file[1] == 'gif')
 		{
 			$format = IMAGETYPE_GIF;
-		}
+		}*/
 
-		// Small image
 		if ($format)
 		{
+			// Creating a new JImage object, passing it an image path
+			$image = new JImage($src);
+
+			// Small image
 			$smallWidth = $this->imageResizeSize['small']['small_width'];
 			$smallHeight = $this->imageResizeSize['small']['small_height'];
-			$destFile = 'S_' . $fileName;
-			$newImage = $image->resize($smallWidth, $smallHeight);
-			$newImage->toFile($destPath . $destFile, $format);
-		}
+			$smallDestFile = 'S_' . $fileName;
 
-		// Medium image
-		if ($format)
-		{
+			// Resize the image using the SCALE_INSIDE method
+			$smallImage = $image->resize($smallWidth, $smallHeight);
+			$smallImage->toFile($destPath . $smallDestFile, $format);
+
+			// Medium image
 			$mediumWidth = $this->imageResizeSize['medium']['medium_width'];
 			$mediumHeight = $this->imageResizeSize['medium']['medium_height'];
-			$destFile = 'M_' . $fileName;
-			$newImage = $image->resize($mediumWidth, $mediumHeight);
-			$newImage->toFile($destPath . $destFile, $format);
-		}
+			$mediumDestFile = 'M_' . $fileName;
 
-		// Large image
-		if ($format)
-		{
+			// Resize the image using the SCALE_INSIDE method
+			$mediumImage = $image->resize($mediumWidth, $mediumHeight);
+			$mediumImage->toFile($destPath . $mediumDestFile, $format);
+
+			// Large image
 			$largeWidth = $this->imageResizeSize['large']['large_height'];
 			$largeHeight = $this->imageResizeSize['large']['large_height'];
 			$destFile = 'L_' . $fileName;
 
 			// Resize the image using the SCALE_INSIDE method
-			$newImage = $image->resize($largeWidth, $largeHeight);
-
-			// Write it to disk
-			$newImage->toFile($destPath . $destFile, $format);
+			$largeImage = $image->resize($largeWidth, $largeHeight);
+			$largeImage->toFile($destPath . $destFile, $format);
 		}
 
 		return true;
@@ -584,11 +604,10 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 	 * @param   STRING  $filename_direct  - for direct download it will be file path like http://
 	 * localhost/j30/media/com_quick2cart/qtc_pack.zip  -- for FUTURE SCOPE
 	 * @param   STRING  $extern           - Remote url or a local file specified by $url
-	 * @param   STRING  $exitHere         - To exit from here
 	 *
 	 * @return  integer
 	 */
-	public function downloadMedia($file, $filename_direct = '', $extern = '', $exitHere = 1)
+	public function downloadMedia($file, $filename_direct = '', $extern = '')
 	{
 		jimport('joomla.filesystem.file');
 
@@ -608,8 +627,8 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		else
 		{
 			/* Return the size of a remote url or a local file specified by $url.
-				$thereturn specifies the unit returned (either bytes "", MiB "mb" or KiB
-				"kb"). */
+			 $thereturn specifies the unit returned (either bytes "", MiB "mb" or KiB
+			 "kb"). */
 			$len = filesize($file);
 		}
 
@@ -640,12 +659,20 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 			@set_time_limit(0);
 		}
 
-		@readfile($file);
+		$fp = fopen($file, "r");
 
-		if ($exitHere == 1)
+		if ($fp !== false)
 		{
-			exit;
+			while (!feof($fp))
+			{
+				$buff = fread($fp, $len);
+				print $buff;
+			}
+
+			fclose($fp);
 		}
+
+		exit;
 	}
 
 	/**
@@ -1030,6 +1057,128 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 				break;
 		}
 
+		return $mime;
+	}
+
+	/**
+	 * Method to upload video file link
+	 *
+	 * @param   string  $uploadLink  post data
+	 *
+	 * @return	mixed
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	public function uploadLink($uploadLink)
+	{
+		$returnData = array();
+		$regExpYoutube = "/^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/";
+		$regExpVimeo = "#(?:https?://player.vimeo.com/video|vimeo.com)/([0-9]+)#i";
+
+		$originalFileName = $uploadLink['name'];
+
+		if (preg_match($regExpYoutube, $uploadLink['name'], $match))
+		{
+			if (strpos($match[4], "embed"))
+			{
+				$uploadLink['name'] = $uploadLink['name'];
+			}
+			else
+			{
+				$uploadLink['name'] = 'https://www.youtube.com/embed/' . $match[5] . '?enablejsapi=1';
+			}
+		}
+		elseif (preg_match($regExpVimeo, $uploadLink['name'], $match))
+		{
+			$uploadLink['name'] = 'https://player.vimeo.com/video/' . $match[1];
+		}
+		else
+		{
+			return false;
+		}
+
+		$returnData['path'] = $uploadLink['name'];
+
+		// File original name
+		$returnData['title'] = $uploadLink['name'];
+		$returnData['original_filename'] = $originalFileName;
+		$returnData['type'] = 'video.' . $uploadLink['type'];
+		$returnData['source'] = $uploadLink['name'];
+		$returnData['valid'] = 1;
+		$returnData['size'] = '';
+		$returnData['access'] = $this->access;
+		$returnData['created_by'] = Factory::getUser()->id;
+		$returnData['created_date'] = Factory::getDate()->toSql();
+		$returnData['storage'] = $this->storage;
+		$returnData['params'] = $this->params;
+
+		JLoader::import("/techjoomla/media/tables/files", JPATH_LIBRARIES);
+		$tjMediaTable = Table::getInstance('Files', 'TJMediaTable');
+
+		if (!$tjMediaTable->save($returnData))
+		{
+			$this->setError(Text::_("LIB_TECHJOOMLA_MEDIA_ERROR_SAVING_FILE"));
+
+			return false;
+		}
+
+		$returnData['id'] = $tjMediaTable->id;
+
+		return $returnData;
+	}
+
+	/**
+	 * Get the Mime type. Copied from libraries/src/Helper/MediaHelper.php
+	 *
+	 * @param   string   $file     The link to the file to be checked
+	 * @param   boolean  $isImage  True if the passed file is an image else false
+	 *
+	 * @return  mixed    the mime type detected false on error
+	 *
+	 * @since   3.7.2
+	 */
+	public function getMimeType($file, $isImage = false)
+	{
+		// If we can't detect anything mime is false
+		$mime = false;
+
+		try
+		{
+			if ($isImage && function_exists('exif_imagetype'))
+			{
+				$mime = image_type_to_mime_type(exif_imagetype($file));
+			}
+			elseif ($isImage && function_exists('getimagesize'))
+			{
+				$imagesize = getimagesize($file);
+				$mime      = isset($imagesize['mime']) ? $imagesize['mime'] : false;
+			}
+			elseif (function_exists('mime_content_type'))
+			{
+				// We have mime magic.
+				$mime = mime_content_type($file);
+			}
+			elseif (function_exists('finfo_open'))
+			{
+				// We have fileinfo
+				$finfo = finfo_open(FILEINFO_MIME_TYPE);
+				$mime  = finfo_file($finfo, $file);
+				finfo_close($finfo);
+			}
+		}
+		catch (\Exception $e)
+		{
+			// If we have any kind of error here => false;
+			return false;
+		}
+
+		// If we can't detect the mime try it again
+		if ($mime === 'application/octet-stream' && $isImage === true)
+		{
+			$mime = $this->getMimeType($file, false);
+		}
+
+		// We have a mime here
 		return $mime;
 	}
 }
