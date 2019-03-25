@@ -11,6 +11,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Filesystem\Folder;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Component\ComponentHelper;
 
 defined('JPATH_PLATFORM') or die();
 
@@ -134,6 +135,11 @@ class TJMediaStorageLocal extends JObject implements TjMedia
 		if ((array_key_exists('allowedExtension', $configs)	&& !empty($configs['allowedExtension'])))
 		{
 			$this->allowedExtension = array_map('strtolower', $configs['allowedExtension']);
+		}
+		else
+		{
+			$param  = ComponentHelper::getParams('com_media');
+			$this->allowedExtension = explode(',', $param->get('upload_extensions'));
 		}
 
 		if (!empty($configs['id']))
