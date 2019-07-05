@@ -8,71 +8,87 @@ if (typeof techjoomla.jQuery == "undefined")
 	techjoomla.jQuery = jQuery;
 }
 
-var tjHouseKeepingScriptsCount = 0;
-var tjEachScriptProgress = 0;
-var tjTotalScripts = 0;
+let tjHouseKeepingScriptsCount = 0;
+let tjEachScriptProgress = 0;
+let initResponse = "";
+
+jQuery(document).ready(function(){
+	let client = TjHouseKeeping.getUrlParam('option');
+	let controller = TjHouseKeeping.getUrlParam('view');
+
+	if (controller === null)
+	{
+		controller = tjHouseKeepingView;
+	}
+
+	jQuery("#tjHouseKeepingFixDatabasebutton").click(function(){
+		TjHouseKeeping.fixDatabase(client, controller);
+	});
+
+	jQuery.ajax({
+		url: Joomla.getOptions('system.paths').base+'/index.php?option='+client+'&task='+controller+'.init'+'&tmpl=component&'+Joomla.getOptions('csrf.token')+'=1',
+		type: 'POST',
+		dataType:'json',
+		success: function(response)
+		{
+			initResponse = response;
+			tjEachScriptProgress = parseFloat(100/response.count,10);
+
+			if (response.count > 0)
+			{
+				/* Show the fix database button if there are scripts found*/
+				jQuery('#tjHouseKeepingFixDatabasebutton').removeClass('hidden');
+			}
+		},
+		error: function(jqXHR, textStatus, errorThrown)
+		{
+			Joomla.renderMessages({'error':["Something went wrong"]});
+		}
+	});
+});
 
 var TjHouseKeeping = {
 
 	fixDatabase: function (client, controller){
 
-		let initResponse = '';
-
 		/* Add required HTML elements in the body*/
 		jQuery('<div class="fix-database-info"><div class="progress-container"></div></div>').insertBefore(".tjBs3");
 
 		/* Disable the fix database button*/
-		jQuery('#toolbar-refresh button').prop('disabled', true);
+		jQuery('#tjHouseKeepingFixDatabasebutton').attr('disabled', true);
 
-		/* Initialise the houseKeeping */
-		jQuery.ajax({
-			url: 'index.php?option='+client+'&task='+controller+'.init'+'&tmpl=component',
-			type: 'POST',
-			dataType:'json',
-			success: function(response)
-			{
-				initResponse = response;
-				tjEachScriptProgress = parseFloat(100/response.count,10);
-				tjTotalScripts = response.count;
-			},
-			error: function(jqXHR, textStatus, errorThrown)
-			{
-				Joomla.renderMessages({'error':["Something went wrong"]});
-			}
-		}).done(function(){
-			tjHouseKeepingScriptsCount = 0;
-			jQuery('.tjBs3').hide();
-			jQuery('.fix-database-info').html('<div class="progress-container"></div>');
-			jQuery('.fix-database-info').show();
+		tjHouseKeepingScriptsCount = 0;
+		jQuery('.tjBs3').hide();
+		jQuery('.fix-database-info').html('<div class="progress-container"></div>');
+		jQuery('.fix-database-info').show();
 
-			if (initResponse.scripts.length > 0)
-			{
-				/* Initialise progress bar */
-				let obj = jQuery('.fix-database-info .progress-container');
-				let progressBarObj = new TjHouseKeeping.createProgressbar(obj);
-				let tjHouseKeepingCounter = 0;
+		if (initResponse.scripts.length > 0)
+		{
+			/* Initialise progress bar */
+			let obj = jQuery('.fix-database-info .progress-container');
+			let progressBarObj = new TjHouseKeeping.createProgressbar(obj);
+			let tjHouseKeepingCounter = 0;
 
-				initResponse.scripts.forEach(function(script)
-				{
-					statusdiv = "<div class='alert alert-plain tjHouseKeepingScriptDiv"+tjHouseKeepingCounter+"'>" +
-									"<div class='before'>Fixing database:&nbsp;"+script[3]+"</div>"+
-									"<div class='after'>"+script[4]+"</div>" +
-								"</div>";
-					jQuery('.fix-database-info').append(statusdiv);
-
-					tjHouseKeepingCounter++;
-				});
-	
-				TjHouseKeeping.extecuteHouseKeeping(initResponse.scripts, client, controller, progressBarObj);
-			}
-			else
+			initResponse.scripts.forEach(function(script)
 			{
-				statusdiv = "<div class='alert alert-info'>" +
-								"<div>Database upto date.</div>"+
+				statusdiv = "<div class='alert alert-plain tjHouseKeepingScriptDiv"+tjHouseKeepingCounter+"'>" +
+								"<div class='before'>Fixing database:&nbsp;"+script[3]+"</div>"+
+								"<div class='after'>"+script[4]+"</div>" +
 							"</div>";
 				jQuery('.fix-database-info').append(statusdiv);
-			}
-		})
+
+				tjHouseKeepingCounter++;
+			});
+
+			TjHouseKeeping.extecuteHouseKeeping(initResponse.scripts, client, controller, progressBarObj);
+		}
+		else
+		{
+			statusdiv = "<div class='alert alert-info'>" +
+							"<div>Database upto date.</div>"+
+						"</div>";
+			jQuery('.fix-database-info').append(statusdiv);
+		}
 
 		return false;
 	},
@@ -81,7 +97,7 @@ var TjHouseKeeping = {
 		let script = scripts[tjHouseKeepingScriptsCount];
 
 		jQuery.ajax({
-			url: 'index.php?option='+client+'&task='+controller+'.executeHouseKeeping&client='+script[0]+'&version='+script[1]+'&script='+script[2]+'&tmpl=component',
+			url: Joomla.getOptions('system.paths').base+'/index.php?option='+client+'&task='+controller+'.executeHouseKeeping&client='+script[0]+'&version='+script[1]+'&script='+script[2]+'&tmpl=component&'+Joomla.getOptions('csrf.token')+'=1',
 			type: 'POST',
 			dataType:'json',
 			success: function(response)
@@ -102,9 +118,9 @@ var TjHouseKeeping = {
 
 				tjHouseKeepingScriptsCount++;
 
-				if (tjHouseKeepingScriptsCount == tjTotalScripts)
+				if (tjHouseKeepingScriptsCount == initResponse.count)
 				{
-					jQuery('#toolbar-refresh button').prop('disabled', false);
+					jQuery('#tjHouseKeepingFixDatabasebutton').addClass('hidden');
 				}
 				else
 				{
@@ -135,5 +151,14 @@ var TjHouseKeeping = {
 			this.progressBar.find('.progress-bar').animate({ width: progressBarWidth }, 10);
 			this.progressBar.find('.progress_per').html(progress + "% ");
 		}
-	}
+	},
+	getUrlParam: function(name){
+		var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+		if (results==null){
+			return null;
+		}
+		else{
+			return results[1] || 0;
+		}
+	},
 }

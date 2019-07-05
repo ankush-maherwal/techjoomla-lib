@@ -13,6 +13,8 @@ defined('_JEXEC') or die('Restricted access');
 JLoader::register('TjModelHouseKeeping', JPATH_SITE . "/libraries/techjoomla/model/houseKeeping.php");
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Language\Text;
 
 /**
  * HouseKeeping controller
@@ -30,6 +32,8 @@ trait TjControllerHouseKeeping
 	 */
 	public function init()
 	{
+		Session::checkToken('get') or jexit(Text::_('JINVALID_TOKEN'));
+
 		$clientExtension = Factory::getApplication()->input->get('option', '', 'STRING');
 
 		$tjHouseKeeping = new TjModelHouseKeeping;
@@ -48,6 +52,8 @@ trait TjControllerHouseKeeping
 	 */
 	public function executeHouseKeeping()
 	{
+		Session::checkToken('get') or jexit(Text::_('JINVALID_TOKEN'));
+
 		$input = Factory::getApplication()->input;
 		$clientExtension = $input->get('client', '', 'STRING');
 		$version = $input->get('version', '', 'STRING');
